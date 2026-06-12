@@ -1,0 +1,33 @@
+[build-system]
+requires = [
+    "setuptools>=68",
+    "wheel",
+    "torch>=2.5",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nvfp4r"
+version = "0.0.1"
+description = "NVFP4 W4A4 inference kernels for Blackwell (B200), targeting vLLM / TRT-LLM end-to-end fusion."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Sihwa Lee" }]
+license = { text = "Apache-2.0" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX :: Linux",
+]
+
+[tool.setuptools]
+package-dir = { "" = "python" }
+
+[tool.setuptools.packages.find]
+where = ["python"]
+
+# [SHLEE/nvfp4r] No plugin entry point is needed: ``nvfp4r`` is integrated as
+# a *first-class* vLLM NVFP4 backend (see the ``NVFP4R`` member of
+# ``NvFp4LinearBackend`` in ``vllm/.../nvfp4_utils.py``). Users opt in via
+# ``VLLM_NVFP4_GEMM_BACKEND=nvfp4r`` -- vLLM's dispatcher then imports
+# ``nvfp4r.vllm_integration`` directly from inside the engine subprocess.
+# This avoids the V1 EngineCore plugin-load split entirely.

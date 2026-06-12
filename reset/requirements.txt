@@ -1,0 +1,20 @@
+# ReSET evaluation harness — minimal runtime deps.
+#
+# Tested env: NVIDIA PyTorch container (nvcr.io/nvidia/pytorch:25.10-py3),
+# Python 3.12, CUDA 12.6, torch 2.7.0+cu126, 8x B200 / driver 580+.
+#
+# ReSET is a vLLM (v1) logits processor; it needs a vLLM build whose
+# `vllm.v1.sample.logits_processor.AdapterLogitsProcessor` API is available
+# and (for NVFP4 checkpoints) the `modelopt_fp4` quantization backend.
+
+vllm==0.9.2
+transformers==5.5.4
+datasets==4.8.4
+
+# NVFP4 (modelopt_fp4) quantization + checkpoints
+nvidia-modelopt==0.35.1
+compressed-tensors==0.10.2
+
+# calibration / analysis
+numpy
+matplotlib

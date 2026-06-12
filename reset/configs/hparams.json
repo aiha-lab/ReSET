@@ -1,0 +1,12 @@
+{
+  "_comment": "Per-model ReSET hyperparameters from the paper. T_high=1.0 and window w=32 throughout; t_low and tau_0 (80th-pct token entropy) are calibrated per model. Use with run_reset.py: --t-high 1.0 --t-low <t_low> --tau0 <tau_0> --window 32.",
+  "t_high": 1.0,
+  "window": 32,
+  "models": {
+    "Qwen3-8B":                     { "t_low": 0.1, "tau_0": 0.5505 },
+    "Qwen3-14B":                    { "t_low": 0.3, "tau_0": 0.4863 },
+    "Qwen3-32B":                    { "t_low": 0.1, "tau_0": 0.5363 },
+    "DeepSeek-R1-Distill-Qwen-7B":  { "t_low": 0.4, "tau_0": 0.6446 },
+    "DeepSeek-R1-Distill-Qwen-14B": { "t_low": 0.3, "tau_0": 0.6488 }
+  }
+}

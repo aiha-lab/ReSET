@@ -1,0 +1,51 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# ---- C++ / CUDA build artifacts ----
+*.so
+*.o
+*.obj
+*.a
+*.cubin
+*.ptx
+*.fatbin
+*.cudafe1.*
+*.module_id
+
+# ---- model weights / datasets (redownload) ----
+models/
+modelzoo/
+hf_cache/
+*.safetensors
+*.bin
+*.pth
+*.pt
+
+# ---- experiment outputs ----
+results/
+outputs/
+logs/
+*.log
+wandb/
+
+# ---- editor / OS junk ----
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+.DS_Store
+
+# ---- caches ----
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.triton_cache/
+.inductor_cache/
