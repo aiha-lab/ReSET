@@ -46,18 +46,21 @@ mutates it in place.
 
 ## Use in vLLM
 
-The vLLM NVFP4 dispatcher selects this backend when
-`VLLM_NVFP4_GEMM_BACKEND=nvfp4r` is set — no plugin registration or code change:
+Activate the backend from Python — call before building the vLLM engine:
 
-```bash
-VLLM_NVFP4_GEMM_BACKEND=nvfp4r python -m vllm.entrypoints... --enforce-eager
-# or, end-to-end with ReSET decoding:
-VLLM_NVFP4_GEMM_BACKEND=nvfp4r python ../reset/run_reset.py --model <nvfp4-ckpt> --enforce-eager
+```python
+import nvfp4r
+nvfp4r.enable()                      # == VLLM_NVFP4_GEMM_BACKEND=nvfp4r
+nvfp4r.configure(gemv_safety=True)   # tune runtime knobs (optional)
+nvfp4r.status()                      # -> {'active': True, 'gemv_max_m': 2, ...}
 ```
 
-The decode path currently runs in eager mode. Env knobs:
-`NVFP4R_FALLBACK_BACKEND`, `NVFP4R_GEMV_MAX_M`, `NVFP4R_GEMM_PAD_MAX_M`,
-`NVFP4R_ENABLE_GEMM`, `NVFP4R_GEMV_SAFETY` (eager NaN guard on the gemv path).
+No plugin registration or model rewrite: vLLM's NVFP4 dispatcher branches into
+`nvfp4r` once activated. The equivalent env var (`VLLM_NVFP4_GEMM_BACKEND=nvfp4r`)
+still works. `configure()` overrides the `NVFP4R_*` env defaults:
+`fallback_backend`, `gemv_max_m`, `gemm_pad_max_m`, `enable_gemm`,
+`gemv_safety` (eager NaN guard on the gemv path). The decode path currently runs
+in eager mode.
 
 ## Build notes
 

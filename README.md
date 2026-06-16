@@ -57,17 +57,24 @@ python quantize.py --model Qwen/Qwen3-8B --output Qwen3-8B-nvfp4    # HF -> NVFP
 
 ### Run end-to-end (NVFP4 kernels + ReSET decoding)
 
-Set `VLLM_NVFP4_GEMM_BACKEND=nvfp4r` to run the linear projections on the
-CUDA-core `nvfp4r` kernels; ReSET decoding is applied automatically.
+Pass `--backend nvfp4r` to run the linear projections on the CUDA-core `nvfp4r`
+kernels; ReSET decoding is applied automatically.
 
 ```bash
-VLLM_NVFP4_GEMM_BACKEND=nvfp4r \
 python run_reset.py --model Qwen3-8B-nvfp4 --task aime120 \
-    --t-low 0.1 --tau0 0.5505 --enforce-eager
+    --t-low 0.1 --tau0 0.5505 --backend nvfp4r --enforce-eager
 ```
 
-Drop `VLLM_NVFP4_GEMM_BACKEND` to use vLLM's stock NVFP4 path. The `nvfp4r`
-decode path currently runs in eager mode (`--enforce-eager`). Tasks: `aime120`,
+Or wire it up from Python:
+
+```python
+import nvfp4r
+nvfp4r.enable()                      # route vLLM's NVFP4 linears through nvfp4r
+nvfp4r.configure(gemv_safety=True)   # optional runtime knobs; nvfp4r.status() to inspect
+```
+
+Omit `--backend nvfp4r` for vLLM's stock NVFP4 path. The `nvfp4r` decode path
+currently runs in eager mode (`--enforce-eager`). Tasks: `aime120`,
 `gpqa_diamond`, `livecodebench`; per-model `t_low` / `tau_0` in
 [`reset/configs/hparams.json`](reset/configs/hparams.json). →
 **[`reset/README.md`](reset/README.md)** · **[`kernels/README.md`](kernels/README.md)**

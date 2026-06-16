@@ -429,7 +429,15 @@ def main():
     ap.add_argument("--quantization", default=None,
                     help="override vLLM quant backend (default: auto modelopt_fp4 "
                          "for *nvfp4* checkpoints)")
+    ap.add_argument("--backend", choices=["auto", "nvfp4r"], default="auto",
+                    help="NVFP4 linear backend; 'nvfp4r' uses the CUDA-core kernels "
+                         "(decode runs eager — pair with --enforce-eager)")
     args = ap.parse_args()
+
+    if args.backend == "nvfp4r":
+        import nvfp4r
+        nvfp4r.enable()
+        print(f"[reset] nvfp4r backend: {nvfp4r.status()}")
 
     max_tokens = args.max_tokens or TASK_MAX_NEW_TOKENS.get(args.task, 32768)
 
