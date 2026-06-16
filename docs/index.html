@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ReSET: Accurate Latency-Critical NVFP4 Reasoning</title>
+  <meta name="description" content="ReSET — accurate, latency-critical NVFP4 reasoning via step-aware temperature scaling, with the first CUDA-core NVFP4 inference framework for small-batch long decoding on NVIDIA Blackwell.">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro">
+  <style>
+    body { font-family: 'Noto Sans', sans-serif; color:#222; }
+    .title, .subtitle, .publication-title { font-family: 'Google Sans', sans-serif; }
+    .hero.is-light-blue { background: linear-gradient(135deg,#f5f8ff 0%,#eef2fb 100%); }
+    .author-block { display:inline-block; margin: 0 .55rem; }
+    .affil { color:#555; }
+    .section { padding: 2.6rem 1.5rem; }
+    .sec-title { margin-bottom: 1.6rem !important; }
+    .body-wrap { max-width: 820px; margin: 0 auto; }      /* one consistent text column */
+    .body-wrap h3 { color:#2c5fb8; font-family:'Google Sans'; font-weight:700; }
+    .metric-card { border:1px solid #e6e6e6; border-radius:12px; padding:1.6rem 1rem; text-align:center; height:100%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+    .metric-num { font-family:'Google Sans'; font-size:2.7rem; font-weight:700; color:#2c5fb8; line-height:1; }
+    .metric-lab { color:#444; margin-top:.55rem; font-size:.98rem; }
+    .framework-spot { background:linear-gradient(135deg,#fff7f0 0%,#fdeede 100%); border:2px solid #e8852e; border-radius:16px; padding:2rem 2.2rem; }
+    .framework-spot h3 { color:#1a1f36; }
+    .dchoice { background:#fff; border:1px solid #f0d9c4; border-radius:10px; padding:1rem 1.1rem; margin-bottom:.8rem; }
+    .dchoice b { color:#c4671a; }
+    .fig { text-align:center; margin: 1.4rem auto 0; }
+    .fig img { width:100%; max-width:880px; border:1px solid #ececec; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
+    .fig figcaption { color:#555; font-size:.95rem; margin:.7rem auto 0; max-width:820px; }
+    pre.bibtex { background:#f5f5f7; border-radius:8px; padding:1rem; overflow-x:auto; }
+    .btn-link { margin:.25rem; }
+    .eq { color:#888; font-size:.85rem; }
+    table.acc td, table.acc th { text-align:center; }
+    table.acc td:first-child, table.acc td:nth-child(2) { text-align:left; }
+    .reset-row { background:#fff4ec; font-weight:600; }
+  </style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<section class="hero is-light-blue">
+  <div class="hero-body">
+    <div class="container is-max-desktop has-text-centered">
+      <h1 class="title is-2 publication-title">ReSET: Accurate Latency-Critical NVFP4 Reasoning<br>via Step-Aware Temperature Scaling</h1>
+      <div class="is-size-5 publication-authors" style="margin-top:1rem;">
+        <span class="author-block"><strong>Sihwa Lee</strong><sup>1</sup><sup class="eq">*</sup></span>
+        <span class="author-block"><strong>Janghwan Lee</strong><sup>1</sup><sup class="eq">*</sup></span>
+        <span class="author-block">Donghoon Yoo<sup>2</sup></span>
+        <span class="author-block">Jae Gon Kim<sup>2</sup></span>
+        <span class="author-block">Hanyul Ryu<sup>2</sup></span>
+        <span class="author-block">Soojung Ryu<sup>2</sup></span>
+        <span class="author-block">Jungwook Choi<sup>1</sup><sup class="eq">&dagger;</sup></span>
+      </div>
+      <div class="is-size-6 affil" style="margin-top:.6rem;">
+        <sup>1</sup>Hanyang University &nbsp;&nbsp; <sup>2</sup>Xenoscube Korea Inc.<br>
+        <span class="eq">* Equal contribution &nbsp;&nbsp; &dagger; Corresponding author</span>
+      </div>
+      <div class="buttons is-centered" style="margin-top:1.4rem;">
+        <a class="button is-dark is-rounded btn-link" href="https://arxiv.org/abs/2606.13233">
+          <span class="icon"><i class="fas fa-file-pdf"></i></span><span>Paper (arXiv)</span></a>
+        <a class="button is-dark is-rounded btn-link" href="https://github.com/aiha-lab/ReSET">
+          <span class="icon"><i class="fab fa-github"></i></span><span>Code</span></a>
+        <a class="button is-dark is-rounded btn-link" href="#framework">
+          <span class="icon"><i class="fas fa-bolt"></i></span><span>NVFP4 Framework</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HIGHLIGHTS ============ -->
+<section class="section" style="padding-top:2.6rem; padding-bottom:1rem;">
+  <div class="container is-max-desktop">
+    <div class="columns">
+      <div class="column"><div class="metric-card">
+        <div class="metric-num">+~2 pts</div>
+        <div class="metric-lab">reasoning accuracy over the NVFP4 baseline<br><span class="eq">no extra forward passes</span></div></div></div>
+      <div class="column"><div class="metric-card">
+        <div class="metric-num">2.5&times;</div>
+        <div class="metric-lab">kernel-level decode speedup<br><span class="eq">vs. NVFP4 in vLLM</span></div></div></div>
+      <div class="column"><div class="metric-card">
+        <div class="metric-num">~2&times;</div>
+        <div class="metric-lab">end-to-end decoding speedup<br><span class="eq">vs. BF16</span></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TEASER ============ -->
+<section class="section" style="padding-top:1.2rem;">
+  <div class="container is-max-desktop">
+    <figure class="fig">
+      <img src="static/images/e2e_speedup.png" alt="End-to-end decode speedup">
+      <figcaption><b>Latency-critical NVFP4 reasoning.</b> ReSET recovers accuracy lost to NVFP4 quantization and, with a CUDA-core small-<i>M</i> kernel, turns NVFP4 into real end-to-end decode speedup over BF16.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ ABSTRACT ============ -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered sec-title">Abstract</h2>
+    <div class="body-wrap content is-size-6 has-text-justified">
+      <p>Large reasoning models (LRMs) improve complex problem-solving by generating long intermediate reasoning traces, but this substantially increases inference costs. NVFP4 inference offers a promising approach to reduce both computational and memory costs through hardware-supported low-precision execution. However, directly applying NVFP4 to LRMs introduces two practical limitations: reasoning accuracy degrades under quantization, and existing NVFP4 kernels do not fully realize latency benefits in small-batch autoregressive decoding.</p>
+      <p>In this work, we analyze the effect of NVFP4 quantization on token-level uncertainty during reasoning. We show that quantization increases incorrect sampling at low-entropy symbolic tokens, while causing over-concentration on a small set of tokens in high-uncertainty reasoning steps. Based on this observation, we propose <b>ReSET</b>, a reasoning-step entropy-based temperature-scaling method that estimates step-level uncertainty online and adapts the decoding temperature using both token-level and step-level entropy signals. To address the latency gap, we further design a <b>CUDA-core small-<i>M</i> NVFP4 kernel</b> for latency-critical autoregressive decoding.</p>
+      <p>Across reasoning benchmarks and model scales, ReSET improves NVFP4 reasoning accuracy by up to ~2 points over the NVFP4 baseline. Our CUDA-core small-<i>M</i> kernel further improves latency-critical decoding, delivering up to <b>2.5&times;</b> kernel-level speedup over NVFP4 vLLM and approximately <b>2&times;</b> end-to-end decoding speedup over BF16.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROBLEM ============ -->
+<section class="section" style="background:#fafbfd;">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered sec-title">Why low-batch NVFP4 decode leaves speed on the table</h2>
+    <div class="body-wrap content is-size-6">
+      <p>Autoregressive reasoning runs at <b>small batch</b> (often <i>M</i>&nbsp;&le;&nbsp;8 active tokens) for thousands of decode steps. Blackwell's NVFP4 GEMM path uses <code>tcgen05.mma</code>, whose tile is <b>fixed at 128 rows</b> along the token dimension. At small <i>M</i> the activation is padded to 128 rows and only <i>M</i> of them are useful — <b>6.25% tile occupancy at <i>M</i>=8, 3.13% at <i>M</i>=4</b>. Throughput stacks hide this with batch sizes in the thousands; in the latency-critical regime the advantage is lost.</p>
+      <p>Decode is <b>memory-bandwidth bound</b>: the win comes from moving 4&times; fewer weight bytes, not from tensor-core math. A kernel that chases tensor-core utilization is solving the wrong problem.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COMPONENT 1: ReSET ============ -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered sec-title">Component 1 — ReSET decoding</h2>
+    <div class="body-wrap content is-size-6">
+      <h3 class="is-5">Step-aware temperature scaling</h3>
+      <p>NVFP4 quantization distorts token-level uncertainty in two ways: it causes <b>incorrect sampling at low-entropy symbolic tokens</b> and <b>over-concentration in high-uncertainty reasoning steps</b>. ReSET estimates step-level uncertainty online and adapts the decoding temperature from <b>both token- and step-level entropy</b> — a drop-in vLLM logits processor with <b>no extra forward passes</b>.</p>
+      <p style="background:#f5f5f7;border-radius:8px;padding:.8rem 1rem;font-family:monospace;font-size:.92rem;">
+        T<sub>t</sub> = T<sub>low</sub>&nbsp; if H<sub>t</sub> &lt; &tau;<sub>t</sub>&nbsp;&nbsp; (&tau;<sub>t</sub>=&tau;<sub>0</sub>, confident step)<br>
+        T<sub>t</sub> = T<sub>high</sub> if H<sub>t</sub> &ge; &tau;<sub>t</sub>&nbsp;&nbsp; (&tau;<sub>t</sub>=&Ecirc;<sub>step</sub>, uncertain step)
+      </p>
+    </div>
+    <figure class="fig"><img src="static/images/fig_reset.png" alt="ReSET method">
+      <figcaption>Step-aware, entropy-gated two-temperature decoding.</figcaption></figure>
+  </div>
+</section>
+
+<!-- ============ COMPONENT 2: nvfp4r framework ============ -->
+<section id="framework" class="section" style="background:#fafbfd;">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered sec-title">Component 2 — the <code>nvfp4r</code> kernel framework</h2>
+    <div class="framework-spot">
+      <p class="has-text-centered" style="margin-bottom:1.2rem;">
+        <img src="static/logo/nvfp4r-logo.png" alt="nvfp4r" style="height:54px;"></p>
+      <div class="content is-size-6">
+        <p>To our knowledge the <b>first CUDA-core NVFP4 (W4A4) inference path</b> for latency-critical decoding on Blackwell. Instead of fighting the fixed 128-row Tensor-Core tile, <code>nvfp4r</code> computes the projection <i>Y=XW</i> at small <i>M</i> on the <b>CUDA cores</b>, exposing <i>M</i> at the thread level. Three design choices make it efficient:</p>
+        <div class="dchoice"><b>C1 &middot; Multi-token CTA fusion.</b> Group the active decode tokens into one thread block, so each HBM-streamed weight tile is <b>loaded once and reused</b> across all tokens — without inflating <i>M</i> to the 128-row tile.</div>
+        <div class="dchoice"><b>C2 &middot; Multi-accumulator threading.</b> Assign multiple output rows per thread, creating <b>independent accumulator chains</b> the warp scheduler interleaves — exposing instruction-level parallelism even when <i>M</i> is small.</div>
+        <div class="dchoice"><b>C3 &middot; Register-only dequantization.</b> Keep unpacked FP16 values <b>in registers</b> and feed them straight into <code>half2</code> FMAs — no shared-memory staging, no inner-<i>K</i>-loop synchronization; load, FP4-unpack, scale, and accumulate overlap across <i>K</i> tiles.</div>
+        <p>The kernel dispatches to a Tensor-Core path for prefill and large-<i>M</i>. It dequantizes NVFP4 to FP16 and uses <code>half2</code> FMAs rather than native FP4 arithmetic, but by matching the decode shape it reaches up to <b>2.5&times;</b> lower projection latency than the NVFP4 Tensor-Core baseline. Registered as <code>torch.ops.nvfp4r.*</code> with a drop-in vLLM linear adapter (<code>sm_100a</code>, CUDA 12.8+).</p>
+      </div>
+    </div>
+    <figure class="fig"><img src="static/images/tensorcore_vs_cudacore.png" alt="CUDA-core NVFP4 kernel design">
+      <figcaption>(a) Tensor-Core GEMM under-occupancy from the required 128-row <i>M</i> tile. (b) The CUDA-core design choices C1–C3.</figcaption></figure>
+  </div>
+</section>
+
+<!-- ============ ACCURACY ============ -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered sec-title">Accuracy</h2>
+    <p class="body-wrap has-text-centered is-size-6" style="margin-bottom:1rem;">ReSET vs. the NVFP4 (RTN) baseline across three reasoning benchmarks and five models (accuracy, &uarr;).</p>
+    <table class="table acc is-fullwidth is-narrow is-hoverable">
+      <thead>
+        <tr><th>Task</th><th>Method</th><th>R1&#8209;Qwen&nbsp;7B</th><th>R1&#8209;Qwen&nbsp;14B</th><th>Qwen3&nbsp;8B</th><th>Qwen3&nbsp;14B</th><th>Qwen3&nbsp;32B</th><th>Avg</th></tr>
+      </thead>
+      <tbody>
+        <tr><td rowspan="2">AIME&#8209;120</td><td>NVFP4</td><td>39.6</td><td>52.4</td><td>62.5</td><td>70.4</td><td>74.4</td><td>59.9</td></tr>
+        <tr class="reset-row"><td>ReSET</td><td>43.8</td><td>54.0</td><td>64.9</td><td>72.1</td><td>77.5</td><td>62.5 <span class="eq">(+2.6)</span></td></tr>
+        <tr><td rowspan="2">GPQA&#8209;Diamond</td><td>NVFP4</td><td>47.1</td><td>53.7</td><td>50.7</td><td>57.4</td><td>62.8</td><td>54.3</td></tr>
+        <tr class="reset-row"><td>ReSET</td><td>46.0</td><td>57.6</td><td>53.2</td><td>58.5</td><td>62.9</td><td>55.6 <span class="eq">(+1.3)</span></td></tr>
+        <tr><td rowspan="2">LiveCodeBench</td><td>NVFP4</td><td>29.5</td><td>37.1</td><td>36.4</td><td>46.7</td><td>46.5</td><td>39.2</td></tr>
+        <tr class="reset-row"><td>ReSET</td><td>28.4</td><td>37.9</td><td>42.1</td><td>46.1</td><td>46.7</td><td>40.2 <span class="eq">(+1.0)</span></td></tr>
+      </tbody>
+    </table>
+    <p class="body-wrap eq has-text-centered">BF16 reference on AIME&#8209;120: 65.1 avg. ReSET recovers a large fraction of the accuracy lost to NVFP4 with no extra forward passes.</p>
+  </div>
+</section>
+
+<!-- ============ LATENCY RESULTS ============ -->
+<section class="section" style="background:#fafbfd;">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered sec-title">End-to-end decode latency</h2>
+    <figure class="fig"><img src="static/images/e2e-8b.png" alt="End-to-end Qwen3-8B"><figcaption>Qwen3-8B — end-to-end decode latency.</figcaption></figure>
+    <figure class="fig"><img src="static/images/e2e-32b.png" alt="End-to-end Qwen3-32B"><figcaption>Qwen3-32B — end-to-end decode latency.</figcaption></figure>
+    <div class="body-wrap content is-size-6" style="margin-top:1.6rem;">
+      <p class="has-text-centered"><b>Per-layer decode latency (&micro;s) at M=8 — nvfp4r vs. NVFP4 vLLM.</b></p>
+      <table class="table is-fullwidth is-narrow is-hoverable">
+        <thead><tr><th>Model</th><th>Layer</th><th>vLLM</th><th>nvfp4r</th><th>Speedup</th></tr></thead>
+        <tbody>
+          <tr><td>Qwen3-8B</td><td>down_proj</td><td>15.49</td><td>11.62</td><td>1.33&times;</td></tr>
+          <tr><td>Qwen3-14B</td><td>down_proj</td><td>22.22</td><td>15.02</td><td>1.48&times;</td></tr>
+          <tr><td>Qwen3-32B</td><td>down_proj</td><td>31.94</td><td>20.56</td><td>1.55&times;</td></tr>
+          <tr><td>Qwen3-32B</td><td>qkv_proj</td><td>11.95</td><td>8.45</td><td>1.41&times;</td></tr>
+        </tbody>
+      </table>
+      <p class="eq has-text-centered">Per-layer speedups of 1.2–1.66&times; compound to ~2&times; end-to-end decode; the kernel-level peak reaches 2.5&times; over NVFP4 vLLM.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BIBTEX ============ -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered sec-title">BibTeX</h2>
+    <pre class="bibtex">@article{lee2026reset,
+  title   = {ReSET: Accurate Latency-Critical NVFP4 Reasoning via Step-Aware Temperature Scaling},
+  author  = {Lee, Sihwa and Lee, Janghwan and Yoo, Donghoon and Kim, Jae Gon and
+             Ryu, Hanyul and Ryu, Soojung and Choi, Jungwook},
+  journal = {arXiv preprint arXiv:2606.13233},
+  year    = {2026}
+}</pre>
+  </div>
+</section>
+
+<footer class="footer" style="padding:2rem 1.5rem;">
+  <div class="container has-text-centered content is-size-7">
+    <p>Hanyang University &middot; Xenoscube Korea Inc. &nbsp;|&nbsp;
+       <a href="https://github.com/aiha-lab/ReSET">github.com/aiha-lab/ReSET</a></p>
+    <p class="eq">Page template adapted from the <a href="https://github.com/nerfies/nerfies.github.io">Nerfies</a> academic project page. Content under CC BY-SA 4.0.</p>
+  </div>
+</footer>
+
+</body>
+</html>

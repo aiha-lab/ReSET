@@ -1,47 +1,83 @@
-<h1 align="center">ReSET: Accurate Latency-Critical NVFP4 Reasoning via Step-Aware Temperature Scaling</h1>
+<h2 align="center">
+ReSET: Accurate Latency-Critical NVFP4 Reasoning via Step-Aware Temperature Scaling
+</h2>
 
-Official implementation. NVFP4 (W4A4) execution on NVIDIA Blackwell cuts the cost
-of large reasoning models, but applied naively it degrades accuracy and leaves
-small-batch decode latency on the table. ReSET fixes both — two components that
-work independently:
+<p align="center">
+| <a href="https://aiha-lab.github.io/ReSET/"><b>Project Page</b></a> |
+<a href="https://arxiv.org/abs/2606.13233"><b>Paper</b></a> |
+<a href="https://github.com/aiha-lab/ReSET"><b>Code</b></a> |
+</p>
 
-|  |  |
-|--|--|
-| **[`reset/`](reset/)** | Step-aware entropy-based decoding-temperature scaling. A drop-in vLLM logits processor — **+~2 pts** over the NVFP4 baseline, no extra forward passes. |
-| **[`kernels/`](kernels/)** | `nvfp4r` — CUDA-core small-`M` NVFP4 W4A4 decode kernels for Blackwell — **2.5×** kernel-level and **~2×** end-to-end decode speedup. |
+**ReSET** makes NVFP4 (W4A4) reasoning on NVIDIA Blackwell both **accurate** and
+**fast for latency-critical decoding**. NVFP4 cuts the cost of large reasoning
+models, but applied naively it degrades accuracy and leaves small-batch decode
+latency on the table. ReSET fixes both, with two components that work
+independently.
 
-## ReSET decoding
+## Highlights
 
-Per token with entropy `H_t`, using the running mean `H̄` of token entropies and
-the within-step estimate `Ĥ_step` (steps split on `\n\n`):
+- **+~2 pts** reasoning accuracy over the NVFP4 baseline — no extra forward passes.
+- **2.5×** kernel-level decode speedup over NVFP4 in vLLM.
+- **~2×** end-to-end decoding speedup over BF16.
+- The first **CUDA-core NVFP4 inference path** for small-batch long decoding
+  (`nvfp4r`), drop-in for vLLM.
 
-```
-T_t = T_low   if  H_t <  τ_t           τ_t = τ_0      (confident step:  Ĥ_step ≤ H̄)
-T_t = T_high  if  H_t ≥  τ_t           τ_t = Ĥ_step   (uncertain step:  Ĥ_step > H̄)
-```
+## Core components
+
+1. **[`reset/`](reset/) — Step-aware temperature scaling.** A drop-in vLLM logits
+   processor that estimates step-level uncertainty online and adapts the decoding
+   temperature from both token- and step-level entropy.
+2. **[`kernels/`](kernels/) — `nvfp4r`.** CUDA-core small-`M` NVFP4 W4A4 decode
+   kernels for Blackwell. At `M ≤ 8` the Tensor-Core `tcgen05.mma` tile is ≤6.25%
+   occupied, so `nvfp4r` streams W4A4 weights through the CUDA cores with a
+   broadcast-weight GEMV instead. Registered under `torch.ops.nvfp4r.*`.
+
+Built on top of [vLLM](https://github.com/vllm-project/vllm).
+
+## Quick start
+
+### ReSET decoding
 
 ```bash
 cd reset && pip install -r requirements.txt && pip install -e .
-python quantize.py --model Qwen/Qwen3-8B --output Qwen3-8B-nvfp4   # HF -> NVFP4
+python quantize.py --model Qwen/Qwen3-8B --output Qwen3-8B-nvfp4    # HF -> NVFP4
 python run_reset.py --model Qwen3-8B-nvfp4 --task aime120 --t-low 0.1 --tau0 0.5505
 ```
 
 Tasks: `aime120`, `gpqa_diamond`, `livecodebench`; per-model hyperparameters in
-`reset/configs/hparams.json`. → **[`reset/README.md`](reset/README.md)**
+[`reset/configs/hparams.json`](reset/configs/hparams.json). →
+**[`reset/README.md`](reset/README.md)**
 
-## nvfp4r kernels
+### `nvfp4r` kernels
 
-A CUDA-core NVFP4 GEMV for latency-critical small-`M` decode, where the
-Tensor-Core `tcgen05.mma` tile sits ≤6.25% occupied at M≤8. Registered under
-`torch.ops.nvfp4r.*` — `gemv` (decode) and `gemm` (prefill / large-`M`).
+<p align="center">
+  <img src="docs/static/logo/nvfp4r-logo.png" alt="nvfp4r" width="260"/>
+</p>
 
 ```bash
-cd kernels && pip install -e . --no-build-isolation   # Blackwell (sm_100a), CUDA 12.8+
+cd kernels && pip install -e . --no-build-isolation    # Blackwell (sm_100a), CUDA 12.8+
 pytest tests/
 ```
 
-A drop-in vLLM linear adapter ships in `python/nvfp4r/vllm_integration.py`.
-→ **[`kernels/README.md`](kernels/README.md)**
+A drop-in vLLM linear adapter ships in
+[`python/nvfp4r/vllm_integration.py`](kernels/python/nvfp4r/vllm_integration.py). →
+**[`kernels/README.md`](kernels/README.md)**
+
+## Supported models
+
+Qwen3 (8B / 14B / 32B) and DeepSeek-R1-Distill-Qwen (7B / 14B), in NVFP4 (W4A4).
+
+## Citation
+
+```bibtex
+@article{lee2026reset,
+  title   = {ReSET: Accurate Latency-Critical NVFP4 Reasoning via Step-Aware Temperature Scaling},
+  author  = {Lee, Sihwa and Lee, Janghwan and Yoo, Donghoon and Kim, Jae Gon and
+             Ryu, Hanyul and Ryu, Soojung and Choi, Jungwook},
+  journal = {arXiv preprint arXiv:2606.13233},
+  year    = {2026}
+}
+```
 
 ## License
 
