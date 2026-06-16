@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/static/logo/nvfp4r-logo.png" alt="nvfp4r" width="104"/>
+</p>
+
 <h2 align="center">
 ReSET: Accurate Latency-Critical NVFP4 Reasoning via Step-Aware Temperature Scaling
 </h2>
@@ -49,10 +53,6 @@ Tasks: `aime120`, `gpqa_diamond`, `livecodebench`; per-model hyperparameters in
 **[`reset/README.md`](reset/README.md)**
 
 ### `nvfp4r` kernels
-
-<p align="center">
-  <img src="docs/static/logo/nvfp4r-logo.png" alt="nvfp4r" width="260"/>
-</p>
 
 ```bash
 cd kernels && pip install -e . --no-build-isolation    # Blackwell (sm_100a), CUDA 12.8+
