@@ -40,28 +40,37 @@ Built on top of [vLLM](https://github.com/vllm-project/vllm).
 
 ## Quick start
 
-### ReSET decoding
+### Install
 
 ```bash
-cd reset && pip install -r requirements.txt && pip install -e .
-python quantize.py --model Qwen/Qwen3-8B --output Qwen3-8B-nvfp4    # HF -> NVFP4
-python run_reset.py --model Qwen3-8B-nvfp4 --task aime120 --t-low 0.1 --tau0 0.5505
+cd reset      && pip install -r requirements.txt && pip install -e .
+cd ../kernels && pip install -e . --no-build-isolation   # nvfp4r — Blackwell (sm_100a), CUDA 12.8+
+pytest tests/                                            # optional: kernel correctness
 ```
 
-Tasks: `aime120`, `gpqa_diamond`, `livecodebench`; per-model hyperparameters in
+### Quantize a model to NVFP4
+
+```bash
+cd ../reset
+python quantize.py --model Qwen/Qwen3-8B --output Qwen3-8B-nvfp4    # HF -> NVFP4 (modelopt)
+```
+
+### Run end-to-end (NVFP4 kernels + ReSET decoding)
+
+Set `VLLM_NVFP4_GEMM_BACKEND=nvfp4r` to run the linear projections on the
+CUDA-core `nvfp4r` kernels; ReSET decoding is applied automatically.
+
+```bash
+VLLM_NVFP4_GEMM_BACKEND=nvfp4r \
+python run_reset.py --model Qwen3-8B-nvfp4 --task aime120 \
+    --t-low 0.1 --tau0 0.5505 --enforce-eager
+```
+
+Drop `VLLM_NVFP4_GEMM_BACKEND` to use vLLM's stock NVFP4 path. The `nvfp4r`
+decode path currently runs in eager mode (`--enforce-eager`). Tasks: `aime120`,
+`gpqa_diamond`, `livecodebench`; per-model `t_low` / `tau_0` in
 [`reset/configs/hparams.json`](reset/configs/hparams.json). →
-**[`reset/README.md`](reset/README.md)**
-
-### `nvfp4r` kernels
-
-```bash
-cd kernels && pip install -e . --no-build-isolation    # Blackwell (sm_100a), CUDA 12.8+
-pytest tests/
-```
-
-A drop-in vLLM linear adapter ships in
-[`python/nvfp4r/vllm_integration.py`](kernels/python/nvfp4r/vllm_integration.py). →
-**[`kernels/README.md`](kernels/README.md)**
+**[`reset/README.md`](reset/README.md)** · **[`kernels/README.md`](kernels/README.md)**
 
 ## Supported models
 

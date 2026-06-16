@@ -44,10 +44,23 @@ mutates it in place.
 `alpha` is folded into the epilogue store; for vLLM NVFP4 callers set it to
 `input_global_scale * weight_global_scale` (default `1.0` is bit-exact legacy).
 
+## Use in vLLM
+
+The vLLM NVFP4 dispatcher selects this backend when
+`VLLM_NVFP4_GEMM_BACKEND=nvfp4r` is set — no plugin registration or code change:
+
+```bash
+VLLM_NVFP4_GEMM_BACKEND=nvfp4r python -m vllm.entrypoints... --enforce-eager
+# or, end-to-end with ReSET decoding:
+VLLM_NVFP4_GEMM_BACKEND=nvfp4r python ../reset/run_reset.py --model <nvfp4-ckpt> --enforce-eager
+```
+
+The decode path currently runs in eager mode. Env knobs:
+`NVFP4R_FALLBACK_BACKEND`, `NVFP4R_GEMV_MAX_M`, `NVFP4R_GEMM_PAD_MAX_M`,
+`NVFP4R_ENABLE_GEMM`, `NVFP4R_GEMV_SAFETY` (eager NaN guard on the gemv path).
+
 ## Build notes
 
 - Targets `sm_100a` (B200); requires CUDA 12.8+ and a matching PyTorch CUDA build.
 - `NVFP4R_GEMV_ONLY=1` builds only the GEMV kernel and links a stub for `gemm`
   (for hosts whose `ptxas` cannot assemble the `tcgen05.mma.block16` path).
-- Env knobs for the vLLM adapter: `NVFP4R_FALLBACK_BACKEND`, `NVFP4R_GEMV_MAX_M`,
-  `NVFP4R_GEMM_PAD_MAX_M`, `NVFP4R_ENABLE_GEMM`.
