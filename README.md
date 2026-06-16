@@ -48,11 +48,13 @@ cd ../kernels && pip install -e . --no-build-isolation   # nvfp4r — Blackwell 
 pytest tests/                                            # optional: kernel correctness
 ```
 
+Installing `reset-decoding` adds two console commands: `reset` (run) and
+`reset-quantize`.
+
 ### Quantize a model to NVFP4
 
 ```bash
-cd ../reset
-python quantize.py --model Qwen/Qwen3-8B --output Qwen3-8B-nvfp4    # HF -> NVFP4 (modelopt)
+reset-quantize --model Qwen/Qwen3-8B --output Qwen3-8B-nvfp4    # HF -> NVFP4 (modelopt)
 ```
 
 ### Run end-to-end (NVFP4 kernels + ReSET decoding)
@@ -61,7 +63,7 @@ Pass `--backend nvfp4r` to run the linear projections on the CUDA-core `nvfp4r`
 kernels; ReSET decoding is applied automatically.
 
 ```bash
-python run_reset.py --model Qwen3-8B-nvfp4 --task aime120 \
+reset --model Qwen3-8B-nvfp4 --task aime120 \
     --t-low 0.1 --tau0 0.5505 --backend nvfp4r --enforce-eager
 ```
 

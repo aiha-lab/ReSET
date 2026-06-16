@@ -10,5 +10,10 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["torch"]
 
+[project.scripts]
+reset = "run_reset:main"
+reset-quantize = "quantize:main"
+
 [tool.setuptools]
 packages = ["reset"]
+py-modules = ["run_reset", "quantize"]

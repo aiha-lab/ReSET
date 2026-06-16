@@ -7,7 +7,7 @@ This document is the detailed reference.
 
 ```bash
 # 1. Quantize an HF model to NVFP4 (modelopt). Produces an HF checkpoint.
-python quantize.py --model Qwen/Qwen3-8B --output Qwen3-8B-nvfp4
+reset-quantize --model Qwen/Qwen3-8B --output Qwen3-8B-nvfp4
 
 # 2. (optional) Re-derive tau_0 for a new model. Paper values are in
 #    configs/hparams.json, so this is only needed off-table. Per the paper,
@@ -17,7 +17,8 @@ python dump_entropy.py --model Qwen3-8B-nvfp4 --out nvfp4.jsonl
 python calibrate.py --nvfp4 nvfp4.jsonl                      # tau_0 = NVFP4 80th percentile
 
 # 3. Evaluate (per-model t_low / tau_0 in configs/hparams.json).
-python run_reset.py --model Qwen3-8B-nvfp4 --task aime120 \
+#    Add --backend nvfp4r --enforce-eager to use the CUDA-core kernels.
+reset --model Qwen3-8B-nvfp4 --task aime120 \
     --t-high 1.0 --t-low 0.1 --tau0 0.5505 --window 32
 
 # overhead microbenchmark (the ~1.5% per-step cost)
