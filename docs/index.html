@@ -32,7 +32,7 @@
     .btn-link { margin:.25rem; }
     .eq { color:#888; font-size:.85rem; }
     table.acc td, table.acc th { text-align:center; }
-    table.acc td:first-child, table.acc td:nth-child(2) { text-align:left; }
+    table.acc td.lcell { text-align:left; }
     .reset-row { background:#fff4ec; font-weight:600; }
   </style>
 </head>
@@ -163,15 +163,15 @@
     <p class="body-wrap has-text-centered is-size-6" style="margin-bottom:1rem;">ReSET vs. the NVFP4 (RTN) baseline across three reasoning benchmarks and five models (accuracy, &uarr;).</p>
     <table class="table acc is-fullwidth is-narrow is-hoverable">
       <thead>
-        <tr><th>Task</th><th>Method</th><th>R1&#8209;Qwen&nbsp;7B</th><th>R1&#8209;Qwen&nbsp;14B</th><th>Qwen3&nbsp;8B</th><th>Qwen3&nbsp;14B</th><th>Qwen3&nbsp;32B</th><th>Avg</th></tr>
+        <tr><th>Task</th><th>Method</th><th>R1&#8209;Qwen&#8209;7B</th><th>R1&#8209;Qwen&#8209;14B</th><th>Qwen3&#8209;8B</th><th>Qwen3&#8209;14B</th><th>Qwen3&#8209;32B</th><th>Avg</th></tr>
       </thead>
       <tbody>
-        <tr><td rowspan="2">AIME&#8209;120</td><td>NVFP4</td><td>39.6</td><td>52.4</td><td>62.5</td><td>70.4</td><td>74.4</td><td>59.9</td></tr>
-        <tr class="reset-row"><td>ReSET</td><td>43.8</td><td>54.0</td><td>64.9</td><td>72.1</td><td>77.5</td><td>62.5 <span class="eq">(+2.6)</span></td></tr>
-        <tr><td rowspan="2">GPQA&#8209;Diamond</td><td>NVFP4</td><td>47.1</td><td>53.7</td><td>50.7</td><td>57.4</td><td>62.8</td><td>54.3</td></tr>
-        <tr class="reset-row"><td>ReSET</td><td>46.0</td><td>57.6</td><td>53.2</td><td>58.5</td><td>62.9</td><td>55.6 <span class="eq">(+1.3)</span></td></tr>
-        <tr><td rowspan="2">LiveCodeBench</td><td>NVFP4</td><td>29.5</td><td>37.1</td><td>36.4</td><td>46.7</td><td>46.5</td><td>39.2</td></tr>
-        <tr class="reset-row"><td>ReSET</td><td>28.4</td><td>37.9</td><td>42.1</td><td>46.1</td><td>46.7</td><td>40.2 <span class="eq">(+1.0)</span></td></tr>
+        <tr><td rowspan="2" class="lcell">AIME&#8209;120</td><td class="lcell">NVFP4</td><td>39.6</td><td>52.4</td><td>62.5</td><td>70.4</td><td>74.4</td><td>59.9</td></tr>
+        <tr class="reset-row"><td class="lcell">ReSET</td><td>43.8</td><td>54.0</td><td>64.9</td><td>72.1</td><td>77.5</td><td>62.5 <span class="eq">(+2.6)</span></td></tr>
+        <tr><td rowspan="2" class="lcell">GPQA&#8209;Diamond</td><td class="lcell">NVFP4</td><td>47.1</td><td>53.7</td><td>50.7</td><td>57.4</td><td>62.8</td><td>54.3</td></tr>
+        <tr class="reset-row"><td class="lcell">ReSET</td><td>46.0</td><td>57.6</td><td>53.2</td><td>58.5</td><td>62.9</td><td>55.6 <span class="eq">(+1.3)</span></td></tr>
+        <tr><td rowspan="2" class="lcell">LiveCodeBench</td><td class="lcell">NVFP4</td><td>29.5</td><td>37.1</td><td>36.4</td><td>46.7</td><td>46.5</td><td>39.2</td></tr>
+        <tr class="reset-row"><td class="lcell">ReSET</td><td>28.4</td><td>37.9</td><td>42.1</td><td>46.1</td><td>46.7</td><td>40.2 <span class="eq">(+1.0)</span></td></tr>
       </tbody>
     </table>
     <p class="body-wrap eq has-text-centered">BF16 reference on AIME&#8209;120: 65.1 avg. ReSET recovers a large fraction of the accuracy lost to NVFP4 with no extra forward passes.</p>
