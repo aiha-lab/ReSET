@@ -57,7 +57,17 @@ Installing `reset-decoding` adds two console commands: `reset-run` and
 reset-quantize --model Qwen/Qwen3-8B --output Qwen3-8B-nvfp4    # HF -> NVFP4 (modelopt)
 ```
 
-### Run end-to-end (NVFP4 kernels + ReSET decoding)
+### Try it — one prompt in, text out
+
+```bash
+python examples/generate.py --model Qwen3-8B-nvfp4 \
+    --prompt "What is 17 times 24? Think step by step."
+```
+
+This runs the NVFP4 checkpoint through the `nvfp4r` kernels with ReSET decoding
+and prints the generation ([`examples/generate.py`](examples/generate.py)).
+
+### Run benchmarks (NVFP4 kernels + ReSET decoding)
 
 Pass `--backend nvfp4r` to run the linear projections on the CUDA-core `nvfp4r`
 kernels; ReSET decoding is applied automatically.
