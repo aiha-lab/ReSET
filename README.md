@@ -101,6 +101,8 @@ Qwen3 (8B / 14B / 32B) and DeepSeek-R1-Distill-Qwen (7B / 14B), in NVFP4 (W4A4).
 
 ## Citation
 
+If you use ReSET for your research, please cite our paper:
+
 ```bibtex
 @article{lee2026reset,
   title   = {ReSET: Accurate Latency-Critical NVFP4 Reasoning via Step-Aware Temperature Scaling},
