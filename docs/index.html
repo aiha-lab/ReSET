@@ -44,6 +44,9 @@
     <div class="container is-max-desktop has-text-centered">
       <img src="static/logo/nvfp4r-logo.png" alt="nvfp4r" style="height:84px; margin-bottom:1rem;">
       <h1 class="title is-2 publication-title">ReSET: Accurate Latency-Critical NVFP4 Reasoning<br>via Step-Aware Temperature Scaling</h1>
+      <p class="subtitle is-5" style="margin-top:1rem; color:#3358d4; font-weight:600;">
+        The first CUDA-core NVFP4 (W4A4) inference path &mdash; a framework built for
+        <span style="white-space:nowrap;">low-batch, long-decode</span> reasoning on Blackwell.</p>
       <div class="is-size-5 publication-authors" style="margin-top:1rem;">
         <span class="author-block"><strong>Sihwa Lee</strong><sup>1</sup><sup class="eq">*</sup></span>
         <span class="author-block"><strong>Janghwan Lee</strong><sup>1</sup><sup class="eq">*</sup></span>
@@ -102,7 +105,7 @@
     <h2 class="title is-3 has-text-centered sec-title">See it decode</h2>
     <figure class="fig">
       <img src="static/demo/nvfp4r-3way.gif" alt="Decode speed: BF16 vs stock-vLLM NVFP4 vs nvfp4r, Qwen3-32B on B200" style="width:100%; max-width:1000px;">
-      <figcaption>The <b>same reasoning prompt</b> decoded three ways on one B200 (Qwen3-32B, batch 1, CUDA graphs): BF16, vLLM's stock NVFP4, and the <code>nvfp4r</code> backend. Recorded token rates, played back slowed down. <code>nvfp4r</code> finishes first &mdash; <b>1.86&times;</b> over BF16 and <b>1.24&times;</b> over stock NVFP4 end-to-end; per-kernel the GEMV gap reaches <b>2.5&times;</b> (table below).</figcaption>
+      <figcaption>A full <b>1,500-token reasoning trace</b> on the same prompt, decoded three ways on one B200 (Qwen3-32B, batch 1, CUDA graphs): BF16, vLLM's stock NVFP4, and the <code>nvfp4r</code> backend. Recorded token rates, played back slowed down. The per-token win <b>compounds across the long decode</b>: <code>nvfp4r</code> finishes the trace in <b>10.5&nbsp;s</b> vs BF16's <b>19.6&nbsp;s</b> &mdash; <b>1.86&times;</b> over BF16 and <b>1.24&times;</b> over stock NVFP4 end-to-end, with the per-kernel GEMV gap reaching <b>2.5&times;</b> (table below).</figcaption>
     </figure>
   </div>
 </section>
@@ -160,6 +163,11 @@
         <div class="dchoice"><b>C2 &middot; Multi-accumulator threading.</b> Assign multiple output rows per thread, creating <b>independent accumulator chains</b> the warp scheduler interleaves — exposing instruction-level parallelism even when <i>M</i> is small.</div>
         <div class="dchoice"><b>C3 &middot; Register-only dequantization.</b> Keep unpacked FP16 values <b>in registers</b> and feed them straight into <code>half2</code> FMAs — no shared-memory staging, no inner-<i>K</i>-loop synchronization; load, FP4-unpack, scale, and accumulate overlap across <i>K</i> tiles.</div>
         <p>The kernel dispatches to a Tensor-Core path for prefill and large-<i>M</i>. It dequantizes NVFP4 to FP16 and uses <code>half2</code> FMAs rather than native FP4 arithmetic, but by matching the decode shape it reaches up to <b>2.5&times;</b> lower projection latency than the NVFP4 Tensor-Core baseline. Registered as <code>torch.ops.nvfp4r.*</code> with a drop-in vLLM linear adapter (<code>sm_100a</code>, CUDA 12.8+).</p>
+        <p style="margin-top:1rem;"><b>Use it as a framework — three lines, no model surgery:</b></p>
+        <pre style="background:#0d1117; color:#c9d1d9; border-radius:8px; padding:1rem 1.2rem; font-size:.86rem; overflow-x:auto;"><span style="color:#8b949e;"># pip install -e kernels/   (Blackwell sm_100a, CUDA 12.8+)</span>
+import nvfp4r
+nvfp4r.enable()                 <span style="color:#8b949e;"># route every NVFP4 linear through nvfp4r</span>
+llm = LLM("Qwen3-32B-nvfp4", quantization="modelopt_fp4")</pre>
       </div>
     </div>
     <figure class="fig"><img src="static/images/tensorcore_vs_cudacore.png" alt="CUDA-core NVFP4 kernel design">
