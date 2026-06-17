@@ -43,7 +43,6 @@ def disable() -> None:
 
 def configure(
     *,
-    gemv_safety: bool | None = None,
     gemv_max_m: int | None = None,
     enable_gemm: bool | None = None,
     gemm_pad_max_m: int | None = None,
@@ -53,7 +52,6 @@ def configure(
     env defaults). Call before the first forward pass.
 
     Args:
-        gemv_safety: recompute non-finite gemv outputs on CUTLASS (eager only).
         gemv_max_m: max decode batch routed to the small-``M`` GEMV.
         enable_gemm: use the tensor-core GEMM path for prefill / mid-``M``.
         gemm_pad_max_m: upper ``M`` for the padded-GEMM decode path.
@@ -61,8 +59,6 @@ def configure(
     """
     from . import vllm_integration as _vi
 
-    if gemv_safety is not None:
-        _vi._GEMV_SAFETY = bool(gemv_safety)
     if gemv_max_m is not None:
         _vi._GEMV_MAX_M = int(gemv_max_m)
     if enable_gemm is not None:
@@ -80,7 +76,6 @@ def status() -> dict:
     return {
         "active": os.environ.get("VLLM_NVFP4_GEMM_BACKEND") == "nvfp4r",
         "gemv_max_m": _vi._GEMV_MAX_M,
-        "gemv_safety": _vi._GEMV_SAFETY,
         "enable_gemm": _vi._ENABLE_GEMM_PATH,
         "gemm_pad_max_m": _vi._GEMM_PAD_MAX_M,
         "fallback_backend": _vi._FALLBACK_BACKEND,

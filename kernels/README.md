@@ -51,7 +51,7 @@ Activate the backend from Python — call before building the vLLM engine:
 ```python
 import nvfp4r
 nvfp4r.enable()                      # == VLLM_NVFP4_GEMM_BACKEND=nvfp4r
-nvfp4r.configure(gemv_safety=True)   # tune runtime knobs (optional)
+nvfp4r.configure(gemv_max_m=2)        # tune runtime knobs (optional)
 nvfp4r.status()                      # -> {'active': True, 'gemv_max_m': 2, ...}
 ```
 
@@ -59,8 +59,7 @@ No plugin registration or model rewrite: vLLM's NVFP4 dispatcher branches into
 `nvfp4r` once activated. The equivalent env var (`VLLM_NVFP4_GEMM_BACKEND=nvfp4r`)
 still works. `configure()` overrides the `NVFP4R_*` env defaults:
 `fallback_backend`, `gemv_max_m`, `gemm_pad_max_m`, `enable_gemm`,
-`gemv_safety` (eager NaN guard on the gemv path). The decode path currently runs
-in eager mode.
+supported in both eager and CUDA-graph (piecewise) execution.
 
 ## Build notes
 

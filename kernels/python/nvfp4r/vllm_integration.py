@@ -92,12 +92,6 @@ _GEMM_PAD_TARGET = 64
 
 _ENABLE_GEMM_PATH = os.environ.get("NVFP4R_ENABLE_GEMM", "1") == "1"
 
-# Eager-only runtime guard: recompute on CUTLASS if the gemv path returns a
-# non-finite output. Catches an input-dependent NaN edge case in the gemv
-# kernel. Disable (set to 0) once the kernel is fixed or when running with
-# CUDA graphs (the isfinite check is a graph break).
-_GEMV_SAFETY = os.environ.get("NVFP4R_GEMV_SAFETY", "1") == "1"
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -277,7 +271,7 @@ def _nvfp4r_linear_impl(
         # inputs in practice via their internal vectorised loaders. If a
         # downstream op asserts contiguity we'll see it as a clean error
         # rather than a silent perf regression.
-        return out_buf.view(N, L_PAD).transpose(0, 1)[:M]
+        return out_buf.view(N, L_PAD).transpose(0, 1)[:M].contiguous()
 
     if enable_gemm and M % 128 == 0 and N % 128 == 0:
         # ----- prefill (gemm) -------------------------------------------
@@ -497,20 +491,9 @@ def apply_nvfp4r_linear(
         _ENABLE_GEMM_PATH,
     )
 
-    # Runtime safety net: the small-M gemv path can emit non-finite values on
-    # certain real activations (an input-dependent kernel edge case); recompute
-    # those calls on the CUTLASS path so a transient NaN never corrupts decoding.
-    # The isfinite check syncs/graph-breaks, so it is gated to eager runs via
-    # NVFP4R_GEMV_SAFETY (default on). The proper fix is in the gemv kernel.
-    if _GEMV_SAFETY and not bool(torch.isfinite(out).all()):
-        return _cutlass_fallback(layer, x, bias)
-
     if bias is not None:
         out = out + bias
-    # Return a row-major contiguous tensor: vLLM's downstream ops (e.g. the
-    # qkv split + per-head RMSNorm) allocate their output with empty_like and
-    # assume contiguous input, so a non-contiguous linear output crashes them.
-    return out.reshape(*output_shape).contiguous()
+    return out.view(*output_shape)
 
 
 # ---------------------------------------------------------------------------

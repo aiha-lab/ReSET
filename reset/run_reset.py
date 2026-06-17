@@ -430,8 +430,7 @@ def main():
                     help="override vLLM quant backend (default: auto modelopt_fp4 "
                          "for *nvfp4* checkpoints)")
     ap.add_argument("--backend", choices=["auto", "nvfp4r"], default="auto",
-                    help="NVFP4 linear backend; 'nvfp4r' uses the CUDA-core kernels "
-                         "(decode runs eager — pair with --enforce-eager)")
+                    help="NVFP4 linear backend; 'nvfp4r' uses the CUDA-core kernels")
     args = ap.parse_args()
 
     if args.backend == "nvfp4r":

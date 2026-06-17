@@ -440,14 +440,22 @@ void mv_kernel(const __grid_constant__ MatVecArgs args) {
                         const half2  acc_hi = __hadd2(acc_hi_a, acc_hi_b);
                         const __half lo     = __hadd(acc_lo.x, acc_lo.y);
                         const __half hi     = __hadd(acc_hi.x, acc_hi.y);
-                        half2 scale = __hmul2(SFA_h2[m][k][s], SFB_h2_tmp[k][s]);
                         if constexpr (kFp16Accum) {
-
+                            half2 scale = __hmul2(SFA_h2[m][k][s], SFB_h2_tmp[k][s]);
                             master_acc[m][b] = __hfma(lo, scale.x, master_acc[m][b]);
                             master_acc[m][b] = __hfma(hi, scale.y, master_acc[m][b]);
                         } else {
-                            fma_f32_f16(master_acc[m][b], lo, scale.x);
-                            fma_f32_f16(master_acc[m][b], hi, scale.y);
+                            // Compute the per-block scale product in FP32: each
+                            // E4M3 block scale can reach 448, and 448*448 >> the
+                            // FP16 max (65504), so __hmul2 would overflow to Inf
+                            // (-> NaN) whenever a weight block and its activation
+                            // block are both large (e.g. attention-output o_proj).
+                            const float sx = __half2float(SFA_h2[m][k][s].x)
+                                           * __half2float(SFB_h2_tmp[k][s].x);
+                            const float sy = __half2float(SFA_h2[m][k][s].y)
+                                           * __half2float(SFB_h2_tmp[k][s].y);
+                            master_acc[m][b] = fmaf(__half2float(lo), sx, master_acc[m][b]);
+                            master_acc[m][b] = fmaf(__half2float(hi), sy, master_acc[m][b]);
                         }
                     }
                 }
