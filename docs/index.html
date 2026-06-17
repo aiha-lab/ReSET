@@ -93,8 +93,8 @@
 <section class="section" style="padding-top:1.2rem;">
   <div class="container is-max-desktop">
     <figure class="fig">
-      <img src="static/images/e2e_speedup.png" alt="End-to-end decode speedup">
-      <figcaption><b>Latency-critical NVFP4 reasoning.</b> ReSET recovers accuracy lost to NVFP4 quantization and, with a CUDA-core small-<i>M</i> kernel, turns NVFP4 into real end-to-end decode speedup over BF16.</figcaption>
+      <img src="static/images/e2e_speedup.png" alt="End-to-end decode speedup over BF16 vs vLLM-CUTLASS and vLLM-FlashInfer, Qwen3-8B and 32B, batch 1 and 8">
+      <figcaption><b>End-to-end decode speedup over BF16.</b> With a CUDA-core small-<i>M</i> kernel, <code>nvfp4r</code> (<span style="color:#d62728;"><b>Ours</b></span>) turns NVFP4 into real decode speedup &mdash; above both vLLM NVFP4 backends (CUTLASS, FlashInfer) across output lengths, for Qwen3-8B (a) and 32B (b) at batch 1 and 8. Up to <b>1.95&times;</b> over BF16 on Qwen3-32B.</figcaption>
     </figure>
   </div>
 </section>
