@@ -96,6 +96,17 @@
   </div>
 </section>
 
+<!-- ============ LIVE DEMO ============ -->
+<section class="section" style="padding-top:1.2rem;">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered sec-title">See it decode</h2>
+    <figure class="fig">
+      <img src="static/demo/nvfp4r-3way.gif" alt="Decode speed: BF16 vs stock-vLLM NVFP4 vs nvfp4r, Qwen3-8B on B200" style="width:100%; max-width:1000px;">
+      <figcaption>The <b>same reasoning prompt</b> decoded three ways on one B200 (Qwen3-8B, batch 1, CUDA graphs): BF16, vLLM's stock NVFP4, and the <code>nvfp4r</code> backend. Recorded token rates, played back slowed down. <code>nvfp4r</code> finishes first &mdash; <b>1.6&times;</b> over BF16 and <b>1.14&times;</b> over stock NVFP4 end-to-end at this scale; the kernel-level gap widens at 32B (see below).</figcaption>
+    </figure>
+  </div>
+</section>
+
 <!-- ============ ABSTRACT ============ -->
 <section class="section">
   <div class="container is-max-desktop">
