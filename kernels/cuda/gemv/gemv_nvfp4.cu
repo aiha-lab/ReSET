@@ -412,8 +412,17 @@ void mv_kernel(const __grid_constant__ MatVecArgs args) {
                 }
                 #pragma unroll
                 for (int s = 0; s < N_SF_BLKS / 2; ++s) {
-                    SFB_h2_tmp[k][s] = cvt_fp8x2_to_fp16x2(
-                        static_cast<uint16_t>(SFB_raw[b][k] >> (s * 16)));
+                    // Pre-scale the weight block-scale by 1/4 so the per-block
+                    // scale product SFA*SFB stays below the FP16 max: each E4M3
+                    // scale reaches 448, and 448*448 overflows FP16 (-> Inf/NaN
+                    // on e.g. o_proj), but 448*(448/4)=50176 < 65504 is safe. The
+                    // 1/4 is exact in FP16 (exponent shift) and is undone by a *4
+                    // on the output, so the result is bit-identical with no
+                    // overflow -- and the fast __hmul2 scale path is preserved.
+                    SFB_h2_tmp[k][s] = __hmul2(
+                        cvt_fp8x2_to_fp16x2(
+                            static_cast<uint16_t>(SFB_raw[b][k] >> (s * 16))),
+                        __float2half2_rn(0.25f));
                 }
             }
 
@@ -440,22 +449,17 @@ void mv_kernel(const __grid_constant__ MatVecArgs args) {
                         const half2  acc_hi = __hadd2(acc_hi_a, acc_hi_b);
                         const __half lo     = __hadd(acc_lo.x, acc_lo.y);
                         const __half hi     = __hadd(acc_hi.x, acc_hi.y);
+                        // SFB_h2_tmp is pre-scaled by 1/4 at load (see above), so
+                        // the half2 scale product can no longer overflow FP16 and
+                        // the fast __hmul2 path is used in both accumulation modes;
+                        // the 1/4 is undone by a *4 on the output.
+                        const half2 scale = __hmul2(SFA_h2[m][k][s], SFB_h2_tmp[k][s]);
                         if constexpr (kFp16Accum) {
-                            half2 scale = __hmul2(SFA_h2[m][k][s], SFB_h2_tmp[k][s]);
                             master_acc[m][b] = __hfma(lo, scale.x, master_acc[m][b]);
                             master_acc[m][b] = __hfma(hi, scale.y, master_acc[m][b]);
                         } else {
-                            // Compute the per-block scale product in FP32: each
-                            // E4M3 block scale can reach 448, and 448*448 >> the
-                            // FP16 max (65504), so __hmul2 would overflow to Inf
-                            // (-> NaN) whenever a weight block and its activation
-                            // block are both large (e.g. attention-output o_proj).
-                            const float sx = __half2float(SFA_h2[m][k][s].x)
-                                           * __half2float(SFB_h2_tmp[k][s].x);
-                            const float sy = __half2float(SFA_h2[m][k][s].y)
-                                           * __half2float(SFB_h2_tmp[k][s].y);
-                            master_acc[m][b] = fmaf(__half2float(lo), sx, master_acc[m][b]);
-                            master_acc[m][b] = fmaf(__half2float(hi), sy, master_acc[m][b]);
+                            master_acc[m][b] = fmaf(__half2float(lo), __half2float(scale.x), master_acc[m][b]);
+                            master_acc[m][b] = fmaf(__half2float(hi), __half2float(scale.y), master_acc[m][b]);
                         }
                     }
                 }
@@ -525,7 +529,8 @@ void mv_kernel(const __grid_constant__ MatVecArgs args) {
                     float v;
                     if constexpr (kFp16Accum) v = __half2float(master_acc[m][b]);
                     else                      v = master_acc[m][b];
-                    store_scaled<OutT>(args.output, out_off, v * args.alpha);
+                    // Undo the 1/4 weight-scale pre-scaling applied at load.
+                    store_scaled<OutT>(args.output, out_off, v * 4.0f * args.alpha);
                 }
             }
         }
