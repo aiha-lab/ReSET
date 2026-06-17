@@ -19,9 +19,9 @@ latency on the table. ReSET fixes both, with two components that work
 independently.
 
 <p align="center">
-  <img src="docs/static/demo/nvfp4r-3way.gif" alt="Decode speed: BF16 vs stock-vLLM NVFP4 vs nvfp4r — Qwen3-8B / B200" width="880"/>
+  <img src="docs/static/demo/nvfp4r-3way.gif" alt="Decode speed: BF16 vs stock-vLLM NVFP4 vs nvfp4r — Qwen3-32B / B200" width="880"/>
 </p>
-<p align="center"><sub>Decode speed on the same prompt — BF16 vs vLLM's stock NVFP4 vs the <code>nvfp4r</code> backend (Qwen3-8B, batch 1, B200, CUDA graphs).</sub></p>
+<p align="center"><sub>Decode speed on the same prompt — BF16 vs vLLM's stock NVFP4 vs the <code>nvfp4r</code> backend (Qwen3-32B, batch 1, B200, CUDA graphs): 1.86&times; over BF16, 1.24&times; over stock NVFP4.</sub></p>
 
 ## Highlights
 
