@@ -18,6 +18,11 @@ models, but applied naively it degrades accuracy and leaves small-batch decode
 latency on the table. ReSET fixes both, with two components that work
 independently.
 
+<p align="center">
+  <img src="docs/static/demo/nvfp4r-speedup.gif" alt="nvfp4r backend OFF vs ON — NVFP4 decode on Qwen3-8B / B200" width="760"/>
+</p>
+<p align="center"><sub>Same NVFP4 checkpoint, decode with the <code>nvfp4r</code> backend off vs on (Qwen3-8B, batch 1, B200).</sub></p>
+
 ## Highlights
 
 - **+~2 pts** reasoning accuracy over the NVFP4 baseline — no extra forward passes.
