@@ -94,7 +94,7 @@
   <div class="container is-max-desktop">
     <figure class="fig">
       <img src="static/images/e2e_speedup.png" alt="End-to-end decode speedup over BF16 vs vLLM-CUTLASS and vLLM-FlashInfer, Qwen3-8B and 32B, batch 1 and 8">
-      <figcaption><b>End-to-end decode speedup over BF16.</b> With a CUDA-core small-<i>M</i> kernel, <code>nvfp4r</code> (<span style="color:#d62728;"><b>Ours</b></span>) turns NVFP4 into real decode speedup &mdash; above both vLLM NVFP4 backends (CUTLASS, FlashInfer) across output lengths, for Qwen3-8B (a) and 32B (b) at batch 1 and 8. Up to <b>1.95&times;</b> over BF16 on Qwen3-32B.</figcaption>
+      <figcaption><b>End-to-end decode speedup over BF16.</b> With a CUDA-core small-<i>M</i> kernel, <code>nvfp4r</code> (<span style="color:#d62728;"><b>Ours</b></span>) turns NVFP4 into real decode speedup &mdash; above <b>both of vLLM's production NVFP4 Tensor-Core backends (CUTLASS and FlashInfer)</b>, the state-of-the-art production serving path on Blackwell, across output lengths, for Qwen3-8B (a) and 32B (b) at batch 1 and 8. Up to <b>1.95&times;</b> over BF16 on Qwen3-32B.</figcaption>
     </figure>
   </div>
 </section>
@@ -104,8 +104,8 @@
   <div class="container is-max-desktop">
     <h2 class="title is-3 has-text-centered sec-title">See it decode</h2>
     <figure class="fig">
-      <img src="static/demo/nvfp4r-3way.gif" alt="Decode speed: BF16 vs stock-vLLM NVFP4 vs nvfp4r, Qwen3-32B on B200" style="width:100%; max-width:1000px;">
-      <figcaption>A full <b>1,500-token reasoning trace</b> on the same prompt, decoded three ways on one B200 (Qwen3-32B, batch 1, CUDA graphs): BF16, vLLM's stock NVFP4, and the <code>nvfp4r</code> backend. Recorded token rates, played back slowed down. The per-token win <b>compounds across the long decode</b>: <code>nvfp4r</code> finishes the trace in <b>10.5&nbsp;s</b> vs BF16's <b>19.6&nbsp;s</b> &mdash; <b>1.86&times;</b> over BF16 and <b>1.24&times;</b> over stock NVFP4 end-to-end, with the per-kernel GEMV gap reaching <b>2.5&times;</b> (table below).</figcaption>
+      <img src="static/demo/nvfp4r-3way.gif" alt="Decode speed: BF16 vs vLLM NVFP4 (CUTLASS) vs nvfp4r, Qwen3-32B on B200" style="width:100%; max-width:1000px;">
+      <figcaption>A full <b>1,500-token reasoning trace</b> on the same prompt, decoded three ways on one B200 (Qwen3-32B, batch 1, CUDA graphs): BF16, vLLM's default NVFP4 (CUTLASS Tensor-Core, the production state-of-the-art), and the <code>nvfp4r</code> backend. Recorded token rates, played back slowed down. The per-token win <b>compounds across the long decode</b>: <code>nvfp4r</code> finishes the trace in <b>10.5&nbsp;s</b> vs BF16's <b>19.6&nbsp;s</b> &mdash; <b>1.86&times;</b> over BF16 and <b>1.24&times;</b> over vLLM's NVFP4 end-to-end, with the per-kernel GEMV gap reaching <b>2.5&times;</b> (table below).</figcaption>
     </figure>
   </div>
 </section>
@@ -127,7 +127,7 @@
     <div class="body-wrap content is-size-6">
       <p><b>Latency-critical long reasoning runs at low batch.</b> Large reasoning models emit thousands of tokens per query — DeepSeek-R1 averages <b>~12K tokens</b> on an AIME problem, up to 64K. Per-token decode latency, not aggregate throughput, sets the serving SLO, which confines feasible operation to <b>small batch (<i>M</i>&nbsp;&le;&nbsp;8 active tokens)</b> across thousands of sequential decode steps — even on a datacenter GPU like the B200.</p>
       <p><b>At low batch the NVFP4 Tensor-Core advantage collapses — and NVFP4 has the most to lose.</b> Its headline <b>4&times;</b> peak throughput over BF16 is only realized at compute-bound batch sizes. Blackwell's NVFP4 GEMM path uses <code>tcgen05.mma</code>, whose tile is <b>fixed at 128 rows</b> along the token dimension: at small <i>M</i> the activation is padded to 128 rows and only <i>M</i> do useful work — <b>6.25% of the tile at <i>M</i>=8, 3.13% at <i>M</i>=4</b>, and at single-token decode (<i>M</i>=1) just <b>1 of the 128 rows</b> — under 1% by construction. That is a near-total collapse of exactly the peak-throughput advantage NVFP4 was deployed for. Throughput stacks hide this with batch sizes in the thousands; in the latency-critical regime it is the whole problem.</p>
-      <p><b>Existing NVFP4 kernels are all Tensor-Core-centric.</b> vLLM, CUTLASS, MR-GPTQ, etc. all dispatch decode projections to <code>tcgen05.mma</code>, leaving the CUDA-core small-<i>M</i> regime unsupported. But decode is <b>memory-bandwidth bound</b> — the win comes from moving 4&times; fewer weight bytes, not from tensor-core math — so the right kernel exposes <i>M</i> at the thread level on the <b>CUDA cores</b>, not through a fixed tensor-core tile. That kernel did not exist. <code>nvfp4r</code> is, to our knowledge, the first.</p>
+      <p><b>Every existing high-performance NVFP4 kernel is Tensor-Core-centric.</b> vLLM, CUTLASS, FlashInfer, MR-GPTQ, etc. all dispatch decode projections to <code>tcgen05.mma</code> — so they <b>all share the same small-<i>M</i> collapse</b>, and none targets the CUDA-core small-<i>M</i> regime. But decode is <b>memory-bandwidth bound</b> — the win comes from moving 4&times; fewer weight bytes, not from tensor-core math — so the right kernel exposes <i>M</i> at the thread level on the <b>CUDA cores</b>, not through a fixed tensor-core tile. That kernel did not exist. <code>nvfp4r</code> is, to our knowledge, the first.</p>
     </div>
   </div>
 </section>
@@ -206,7 +206,7 @@ llm = LLM("Qwen3-32B-nvfp4", quantization="modelopt_fp4")</pre>
     <figure class="fig"><img src="static/images/e2e-32b.png" alt="End-to-end Qwen3-32B"><figcaption>Qwen3-32B — end-to-end decode latency.</figcaption></figure>
     <div class="body-wrap content is-size-6" style="margin-top:1.6rem;">
       <p class="has-text-centered"><b>Kernel-level decode latency (&micro;s) for <i>M</i>=1 GEMV — <code>nvfp4r</code> vs. vLLM-CUTLASS.</b><br>
-        <span class="eq">Single-token decode (<i>M</i>=1) is the latency-critical regime; baseline is vLLM-CUTLASS at <i>M</i>=1, B200.</span></p>
+        <span class="eq">Single-token decode (<i>M</i>=1) is the latency-critical regime; baseline is vLLM-CUTLASS — vLLM's state-of-the-art production Tensor-Core NVFP4 kernel on Blackwell — at <i>M</i>=1, B200.</span></p>
       <table class="table is-fullwidth is-narrow is-hoverable acc">
         <thead><tr><th class="lcell">Model</th><th class="lcell">Layer</th><th><i>N</i></th><th><i>K</i></th><th>nvfp4r</th><th>vLLM</th><th>Speedup</th></tr></thead>
         <tbody>
