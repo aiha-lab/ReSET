@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ReSET: Accurate Latency-Critical NVFP4 Reasoning</title>
-  <meta name="description" content="ReSET — accurate, latency-critical NVFP4 reasoning via step-aware temperature scaling, with the first CUDA-core NVFP4 inference framework for small-batch long decoding on NVIDIA Blackwell.">
+  <meta name="description" content="nvfp4r — the first CUDA-core NVFP4 (W4A4) kernel for latency-critical small-batch decoding on NVIDIA Blackwell, paired with ReSET step-aware temperature scaling to keep low-precision reasoning accurate.">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro">
@@ -77,14 +77,14 @@
   <div class="container is-max-desktop">
     <div class="columns">
       <div class="column"><div class="metric-card">
-        <div class="metric-num">+~2 pts</div>
-        <div class="metric-lab">reasoning accuracy over the NVFP4 baseline<br><span class="eq">no extra forward passes</span></div></div></div>
-      <div class="column"><div class="metric-card">
         <div class="metric-num">2.5&times;</div>
-        <div class="metric-lab">kernel-level decode speedup<br><span class="eq">vs. NVFP4 in vLLM</span></div></div></div>
+        <div class="metric-lab">kernel-level decode speedup<br><span class="eq">CUDA-core NVFP4 GEMV vs. NVFP4 in vLLM</span></div></div></div>
       <div class="column"><div class="metric-card">
         <div class="metric-num">~2&times;</div>
-        <div class="metric-lab">end-to-end decoding speedup<br><span class="eq">vs. BF16</span></div></div></div>
+        <div class="metric-lab">end-to-end decoding speedup<br><span class="eq">vs. BF16, small-batch long decode</span></div></div></div>
+      <div class="column"><div class="metric-card">
+        <div class="metric-num">+~2 pts</div>
+        <div class="metric-lab">reasoning accuracy over the NVFP4 baseline<br><span class="eq">ReSET, no extra forward passes</span></div></div></div>
     </div>
   </div>
 </section>
@@ -125,35 +125,20 @@
 <!-- ============ PROBLEM ============ -->
 <section class="section" style="background:#fafbfd;">
   <div class="container is-max-desktop">
-    <h2 class="title is-3 has-text-centered sec-title">Why low-batch NVFP4 decode leaves speed on the table</h2>
+    <h2 class="title is-3 has-text-centered sec-title">Why a CUDA-core NVFP4 kernel?</h2>
     <div class="body-wrap content is-size-6">
-      <p>Autoregressive reasoning runs at <b>small batch</b> (often <i>M</i>&nbsp;&le;&nbsp;8 active tokens) for thousands of decode steps. Blackwell's NVFP4 GEMM path uses <code>tcgen05.mma</code>, whose tile is <b>fixed at 128 rows</b> along the token dimension. At small <i>M</i> the activation is padded to 128 rows and only <i>M</i> of them are useful — <b>6.25% tile occupancy at <i>M</i>=8, 3.13% at <i>M</i>=4</b>. Throughput stacks hide this with batch sizes in the thousands; in the latency-critical regime the advantage is lost.</p>
-      <p>Decode is <b>memory-bandwidth bound</b>: the win comes from moving 4&times; fewer weight bytes, not from tensor-core math. A kernel that chases tensor-core utilization is solving the wrong problem.</p>
+      <p><b>On-device long reasoning is a low-batch workload.</b> Large reasoning models emit thousands of tokens per query — DeepSeek-R1 averages <b>~12K tokens</b> on an AIME problem, up to 64K. Per-token decode latency, not aggregate throughput, sets the serving SLO, which confines feasible operation to <b>small batch (<i>M</i>&nbsp;&le;&nbsp;8 active tokens)</b> across thousands of sequential decode steps.</p>
+      <p><b>At low batch the NVFP4 Tensor-Core advantage collapses — and NVFP4 has the most to lose.</b> Its headline <b>4&times;</b> peak throughput over BF16 is only realized at compute-bound batch sizes. Blackwell's NVFP4 GEMM path uses <code>tcgen05.mma</code>, whose tile is <b>fixed at 128 rows</b> along the token dimension: at small <i>M</i> the activation is padded to 128 rows and only <i>M</i> are useful — <b>6.25% occupancy at <i>M</i>=8, 3.13% at <i>M</i>=4</b>. Measured NVFP4 Tensor-Core utilization stays <b>below 1%</b> in this regime — a near-total collapse of exactly the peak-throughput advantage NVFP4 was deployed for. Throughput stacks hide this with batch sizes in the thousands; in the latency-critical regime it is the whole problem.</p>
+      <p><b>Existing NVFP4 kernels are all Tensor-Core-centric.</b> vLLM, CUTLASS, and MR-GPTQ all dispatch decode projections to <code>tcgen05.mma</code>, leaving the CUDA-core small-<i>M</i> regime unsupported. But decode is <b>memory-bandwidth bound</b> — the win comes from moving 4&times; fewer weight bytes, not from tensor-core math — so the right kernel exposes <i>M</i> at the thread level on the <b>CUDA cores</b>, not through a fixed tensor-core tile. That kernel did not exist. <code>nvfp4r</code> is, to our knowledge, the first.</p>
     </div>
   </div>
 </section>
 
-<!-- ============ COMPONENT 1: ReSET ============ -->
-<section class="section">
+<!-- ============ CORE CONTRIBUTION: nvfp4r kernel ============ -->
+<section id="framework" class="section">
   <div class="container is-max-desktop">
-    <h2 class="title is-3 has-text-centered sec-title">Component 1 — ReSET decoding</h2>
-    <div class="body-wrap content is-size-6">
-      <h3 class="is-5">Step-aware temperature scaling</h3>
-      <p>NVFP4 quantization distorts token-level uncertainty in two ways: it causes <b>incorrect sampling at low-entropy symbolic tokens</b> and <b>over-concentration in high-uncertainty reasoning steps</b>. ReSET estimates step-level uncertainty online and adapts the decoding temperature from <b>both token- and step-level entropy</b> — a drop-in vLLM logits processor with <b>no extra forward passes</b>.</p>
-      <p style="background:#f5f5f7;border-radius:8px;padding:.8rem 1rem;font-family:monospace;font-size:.92rem;">
-        T<sub>t</sub> = T<sub>low</sub>&nbsp; if H<sub>t</sub> &lt; &tau;<sub>t</sub>&nbsp;&nbsp; (&tau;<sub>t</sub>=&tau;<sub>0</sub>, confident step)<br>
-        T<sub>t</sub> = T<sub>high</sub> if H<sub>t</sub> &ge; &tau;<sub>t</sub>&nbsp;&nbsp; (&tau;<sub>t</sub>=&Ecirc;<sub>step</sub>, uncertain step)
-      </p>
-    </div>
-    <figure class="fig"><img src="static/images/fig_reset.png" alt="ReSET method">
-      <figcaption>Step-aware, entropy-gated two-temperature decoding.</figcaption></figure>
-  </div>
-</section>
-
-<!-- ============ COMPONENT 2: nvfp4r framework ============ -->
-<section id="framework" class="section" style="background:#fafbfd;">
-  <div class="container is-max-desktop">
-    <h2 class="title is-3 has-text-centered sec-title">Component 2 — the <code>nvfp4r</code> kernel framework</h2>
+    <h2 class="title is-3 has-text-centered sec-title">Core contribution — the <code>nvfp4r</code> CUDA-core kernel</h2>
+    <p class="body-wrap has-text-centered is-size-6" style="margin-bottom:1.4rem; color:#444;">A decode-specialized NVFP4 kernel is what turns the format's 4&times; weight-bandwidth saving into <i>real</i> small-batch latency &mdash; the speedup every Tensor-Core stack leaves on the table.</p>
     <div class="framework-spot">
       <p class="has-text-centered" style="margin-bottom:1.2rem;">
         <img src="static/logo/nvfp4r-logo.png" alt="nvfp4r" style="height:54px;"></p>
@@ -172,6 +157,24 @@ llm = LLM("Qwen3-32B-nvfp4", quantization="modelopt_fp4")</pre>
     </div>
     <figure class="fig"><img src="static/images/tensorcore_vs_cudacore.png" alt="CUDA-core NVFP4 kernel design">
       <figcaption>(a) Tensor-Core GEMM under-occupancy from the required 128-row <i>M</i> tile. (b) The CUDA-core design choices C1–C3.</figcaption></figure>
+  </div>
+</section>
+
+<!-- ============ ACCURACY COMPANION: ReSET ============ -->
+<section class="section" style="background:#fafbfd;">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered sec-title">Accuracy companion — ReSET decoding</h2>
+    <div class="body-wrap content is-size-6">
+      <p style="color:#444;">The kernel restores NVFP4 <i>speed</i>; ReSET restores NVFP4 <i>accuracy</i> — together they make low-precision reasoning deployable, not just fast. ReSET is a drop-in decoding policy with <b>no extra forward passes</b>.</p>
+      <h3 class="is-5">Step-aware temperature scaling</h3>
+      <p>NVFP4 quantization distorts token-level uncertainty in two ways: it causes <b>incorrect sampling at low-entropy symbolic tokens</b> and <b>over-concentration in high-uncertainty reasoning steps</b>. ReSET estimates step-level uncertainty online and adapts the decoding temperature from <b>both token- and step-level entropy</b> — a drop-in vLLM logits processor.</p>
+      <p style="background:#f5f5f7;border-radius:8px;padding:.8rem 1rem;font-family:monospace;font-size:.92rem;">
+        T<sub>t</sub> = T<sub>low</sub>&nbsp; if H<sub>t</sub> &lt; &tau;<sub>t</sub>&nbsp;&nbsp; (&tau;<sub>t</sub>=&tau;<sub>0</sub>, confident step)<br>
+        T<sub>t</sub> = T<sub>high</sub> if H<sub>t</sub> &ge; &tau;<sub>t</sub>&nbsp;&nbsp; (&tau;<sub>t</sub>=&Ecirc;<sub>step</sub>, uncertain step)
+      </p>
+    </div>
+    <figure class="fig"><img src="static/images/fig_reset.png" alt="ReSET method">
+      <figcaption>Step-aware, entropy-gated two-temperature decoding.</figcaption></figure>
   </div>
 </section>
 
