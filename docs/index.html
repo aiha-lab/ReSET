@@ -110,14 +110,12 @@
   </div>
 </section>
 
-<!-- ============ ABSTRACT ============ -->
+<!-- ============ OVERVIEW ============ -->
 <section class="section">
   <div class="container is-max-desktop">
-    <h2 class="title is-3 has-text-centered sec-title">Abstract</h2>
+    <h2 class="title is-3 has-text-centered sec-title">Overview</h2>
     <div class="body-wrap content is-size-6 has-text-justified">
-      <p>Large reasoning models (LRMs) improve complex problem-solving by generating long intermediate reasoning traces, but this substantially increases inference costs. NVFP4 inference offers a promising approach to reduce both computational and memory costs through hardware-supported low-precision execution. However, directly applying NVFP4 to LRMs introduces two practical limitations: reasoning accuracy degrades under quantization, and existing NVFP4 kernels do not fully realize latency benefits in small-batch autoregressive decoding.</p>
-      <p>In this work, we analyze the effect of NVFP4 quantization on token-level uncertainty during reasoning. We show that quantization increases incorrect sampling at low-entropy symbolic tokens, while causing over-concentration on a small set of tokens in high-uncertainty reasoning steps. Based on this observation, we propose <b>ReSET</b>, a reasoning-step entropy-based temperature-scaling method that estimates step-level uncertainty online and adapts the decoding temperature using both token-level and step-level entropy signals. To address the latency gap, we further design a <b>CUDA-core small-<i>M</i> NVFP4 kernel</b> for latency-critical autoregressive decoding.</p>
-      <p>Across reasoning benchmarks and model scales, ReSET improves NVFP4 reasoning accuracy by up to ~2 points over the NVFP4 baseline. Our CUDA-core small-<i>M</i> kernel further improves latency-critical decoding, delivering up to <b>2.5&times;</b> kernel-level speedup over NVFP4 vLLM and approximately <b>2&times;</b> end-to-end decoding speedup over BF16.</p>
+      <p><code>nvfp4r</code> is, to our knowledge, the <b>first CUDA-core NVFP4 (W4A4) kernel</b> for latency-critical small-batch decoding on Blackwell, delivering up to <b>2.5&times;</b> faster decode GEMV over NVFP4 in vLLM and approximately <b>2&times;</b> end-to-end speedup over BF16. <b>ReSET</b>, a step-aware temperature-scaling policy, closes the accuracy gap NVFP4 opens (up to ~2 points) with no extra forward passes — together making low-precision reasoning both fast and accurate.</p>
     </div>
   </div>
 </section>
