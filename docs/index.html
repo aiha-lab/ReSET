@@ -45,7 +45,7 @@
       <img src="static/logo/nvfp4r-logo.png" alt="nvfp4r" style="height:82px; margin-bottom:1rem;">
       <h1 class="title is-2 publication-title" style="font-size:2.25rem;">ReSET: Accurate Latency-Critical NVFP4 Reasoning<br>via Step-Aware Temperature Scaling</h1>
       <p class="subtitle is-5" style="margin-top:1rem; color:#3358d4; font-weight:600;">
-        The first CUDA-core NVFP4 (W4A4) inference path &mdash; a framework built for
+        The first CUDA-core NVFP4 (W4A4) inference framework &mdash; built for
         <span style="white-space:nowrap;">low-batch, long-decode</span> reasoning on Blackwell.</p>
       <div class="is-size-5 publication-authors" style="margin-top:1rem;">
         <span class="author-block"><strong>Sihwa Lee</strong><sup>1</sup><sup class="eq">*</sup></span>
@@ -141,11 +141,11 @@
       <p class="has-text-centered" style="margin-bottom:1.2rem;">
         <img src="static/logo/nvfp4r-logo.png" alt="nvfp4r" style="height:54px;"></p>
       <div class="content is-size-6">
-        <p>To our knowledge the <b>first CUDA-core NVFP4 (W4A4) inference path</b> for latency-critical decoding on Blackwell. Instead of fighting the fixed 128-row Tensor-Core tile, <code>nvfp4r</code> computes the projection <i>Y=XW</i> at small <i>M</i> on the <b>CUDA cores</b>, exposing <i>M</i> at the thread level. Three design choices make it efficient:</p>
+        <p>To our knowledge the <b>first CUDA-core NVFP4 (W4A4) inference framework</b>, built around a CUDA-core small-<i>M</i> GEMV kernel for latency-critical decoding on Blackwell and shipped as a drop-in vLLM kernel backend. Instead of fighting the fixed 128-row Tensor-Core tile, <code>nvfp4r</code> computes the projection <i>Y=XW</i> at small <i>M</i> on the <b>CUDA cores</b>, exposing <i>M</i> at the thread level. Three design choices make it efficient:</p>
         <div class="dchoice"><b>C1 &middot; Multi-token CTA fusion.</b> Group the active decode tokens into one thread block, so each HBM-streamed weight tile is <b>loaded once and reused</b> across all tokens — without inflating <i>M</i> to the 128-row tile.</div>
         <div class="dchoice"><b>C2 &middot; Multi-accumulator threading.</b> Assign multiple output rows per thread, creating <b>independent accumulator chains</b> the warp scheduler interleaves — exposing instruction-level parallelism even when <i>M</i> is small.</div>
         <div class="dchoice"><b>C3 &middot; Register-only dequantization.</b> Keep unpacked FP16 values <b>in registers</b> and feed them straight into <code>half2</code> FMAs — no shared-memory staging, no inner-<i>K</i>-loop synchronization; load, FP4-unpack, scale, and accumulate overlap across <i>K</i> tiles.</div>
-        <p>The kernel dispatches to a Tensor-Core path for prefill and large-<i>M</i>. It dequantizes NVFP4 to FP16 and uses <code>half2</code> FMAs rather than native FP4 arithmetic, but by matching the decode shape it reaches up to <b>2.5&times;</b> lower projection latency than the NVFP4 Tensor-Core baseline. Registered as <code>torch.ops.nvfp4r.*</code> with a drop-in vLLM linear adapter (<code>sm_100a</code>, CUDA 12.8+).</p>
+        <p>The kernel dispatches to a Tensor-Core path for prefill and large-<i>M</i>. It dequantizes NVFP4 to FP16 and uses <code>half2</code> FMAs rather than native FP4 arithmetic, but by matching the decode shape it reaches up to <b>2.5&times;</b> lower projection latency than the NVFP4 Tensor-Core baseline. Registered as <code>torch.ops.nvfp4r.*</code> and swapped in as a drop-in vLLM <b>kernel backend</b> for NVFP4 linears (<code>sm_100a</code>, CUDA 12.8+).</p>
         <p style="margin-top:1rem;"><b>Use it as a framework — three lines, no model surgery:</b></p>
         <pre style="background:#0d1117; color:#c9d1d9; border-radius:8px; padding:1rem 1.2rem; font-size:.86rem; overflow-x:auto;"><span style="color:#8b949e;"># pip install -e kernels/   (Blackwell sm_100a, CUDA 12.8+)</span>
 import nvfp4r
@@ -158,10 +158,10 @@ llm = LLM("Qwen3-32B-nvfp4", quantization="modelopt_fp4")</pre>
   </div>
 </section>
 
-<!-- ============ ACCURACY COMPANION: ReSET ============ -->
+<!-- ============ RESET: accuracy ============ -->
 <section class="section" style="background:#fafbfd;">
   <div class="container is-max-desktop">
-    <h2 class="title is-3 has-text-centered sec-title">Accuracy companion — ReSET decoding</h2>
+    <h2 class="title is-3 has-text-centered sec-title">ReSET — Reasoning Step Entropy-based Temperature scaling</h2>
     <div class="body-wrap content is-size-6">
       <p style="color:#444;">The kernel restores NVFP4 <i>speed</i>; ReSET restores NVFP4 <i>accuracy</i> — together they make low-precision reasoning deployable, not just fast. ReSET is a drop-in decoding policy with <b>no extra forward passes</b>.</p>
       <h3 class="is-5">Step-aware temperature scaling</h3>
