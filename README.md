@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/static/logo/nvfp4r-logo.png" alt="nvfp4r" width="104"/>
+  <img src="docs/static/logo/nvfp4r-logo.png" alt="nvfp4r" width="220"/>
 </p>
 
 <h2 align="center">
