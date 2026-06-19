@@ -206,7 +206,7 @@ llm = LLM("Qwen3-32B-nvfp4", quantization="modelopt_fp4")</pre>
     <figure class="fig"><img src="static/images/e2e-32b.png" alt="End-to-end Qwen3-32B"><figcaption>Qwen3-32B — end-to-end decode latency.</figcaption></figure>
     <div class="body-wrap content is-size-6" style="margin-top:1.6rem;">
       <p class="has-text-centered"><b>Kernel-level decode latency (&micro;s) for <i>M</i>=1 GEMV — <code>nvfp4r</code> vs. vLLM-CUTLASS.</b><br>
-        <span class="eq">Single-token decode (<i>M</i>=1) is the latency-critical regime; baseline is vLLM-CUTLASS — vLLM's state-of-the-art production Tensor-Core NVFP4 kernel on Blackwell — at <i>M</i>=1, B200.</span></p>
+        <span class="eq">Single-token decode (<i>M</i>=1) is the latency-critical regime; baseline is vLLM-CUTLASS — vLLM's state-of-the-art production Tensor-Core NVFP4 kernel on Blackwell — at <i>M</i>=1 on NVIDIA B200 (sm_100a), against vLLM's CUTLASS/FlashInfer NVFP4 backends.</span></p>
       <table class="table is-fullwidth is-narrow is-hoverable acc">
         <thead><tr><th class="lcell">Model</th><th class="lcell">Layer</th><th><i>N</i></th><th><i>K</i></th><th>nvfp4r</th><th>vLLM</th><th>Speedup</th></tr></thead>
         <tbody>
@@ -247,6 +247,7 @@ llm = LLM("Qwen3-32B-nvfp4", quantization="modelopt_fp4")</pre>
   <div class="container has-text-centered content is-size-7">
     <p>Hanyang University &middot; Xenoscube Korea Inc. &nbsp;|&nbsp;
        <a href="https://github.com/aiha-lab/ReSET">github.com/aiha-lab/ReSET</a></p>
+    <p class="eq">Last updated: June 19, 2026 &nbsp;&middot;&nbsp; Benchmarked on NVIDIA B200 (sm_100a).</p>
     <p class="eq">Page template adapted from the <a href="https://github.com/nerfies/nerfies.github.io">Nerfies</a> academic project page. Content under CC BY-SA 4.0.</p>
   </div>
 </footer>
